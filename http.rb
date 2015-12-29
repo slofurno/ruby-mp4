@@ -31,10 +31,18 @@ def handle_static (sock, headers)
     end
 end
 
+
+def serve_static (sock, filename)
+    File.open(filename) do |file|
+        serve_content(sock, file, 'text/html')
+    end
+end
+
 def handle_gif (sock, headers)
     m = headers['Uri'].split('/') 
-    puts "requested gif id #{m[2]}"
-
+    File.open("./tmp/#{m[2]}/out.gif") do |file|
+        serve_content(sock, file, 'image/gif')
+    end
 end
 
 def handle_icon (sock, headers)
