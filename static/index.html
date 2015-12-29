@@ -187,7 +187,9 @@ function grab ()
             var buf = Uint8Array.from(b);
             console.log(buf);
             var blob = new Blob([buf], {type:'image/png'});
-            http.request("POST", "/api", blob);
+            http.request("POST", "/api", blob).then(function(res){
+                console.log(`${location.host}/gif/${res}`);
+            });
         }
     };
 
