@@ -42,6 +42,7 @@ body {
         <div id = "seek" style="width:100%; height:14px; background-color:red;">
             <div id="seekbar" style="width:14px; height:14px; background-color:gray;"></div> 
         </div>
+        <a href = "#" id="giflink">wait for gif</a>
 
     </div>
     <div id = "frames" style="width:240px;
@@ -96,6 +97,7 @@ var forward = document.getElementById("forward");
 var back = document.getElementById("back");
 var seek = document.getElementById("seek");
 var seekbar = document.getElementById("seekbar");
+var giflink = document.getElementById("giflink");
 var buffers = [];
 
 document.getElementById("seek").addEventListener("mousedown", function(e){
@@ -188,7 +190,9 @@ function grab ()
             console.log(buf);
             var blob = new Blob([buf], {type:'image/png'});
             http.request("POST", "/api", blob).then(function(res){
-                console.log(`${location.host}/gif/${res}`);
+                var link = `${location.host}/gif/${res}`;
+                giflink.href = link;
+                giflink.innerHTML = link;
             });
         }
     };
