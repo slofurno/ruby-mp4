@@ -14,7 +14,7 @@ body {
 	font-size:100%;
 	margin: 0 auto;
     min-height: 100%;
-    max-width: 800px;
+    max-width: 1000px;
 }
 .dropzone {
 	background-color: chartreuse;
@@ -45,7 +45,7 @@ body {
         <a href = "#" id="giflink">wait for gif</a>
 
     </div>
-    <div id = "frames" style="width:240px;
+    <div id = "frames" style="width:440px;
         height:600px; 
         overflow-y:scroll;
         background-color:ghostwhite; 
@@ -206,7 +206,7 @@ function grab ()
 function takeFrame ()
 {
     var ratio = v.videoHeight / v.videoWidth;
-    var width = 200;
+    var width = 400;
     var height = width * ratio|0;
     console.log(width, height);
 
