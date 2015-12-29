@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+* {
+	-webkit-box-sizing: border-box;
+	-moz-box-sizing: border-box;
+	box-sizing: border-box;
+}
+
+body {
+	font-size:100%;
+	margin: 0 auto;
+    min-height: 100%;
+    max-width: 800px;
+}
+.dropzone {
+	background-color: chartreuse;
+	width:400px;
+	height:200px;
+}
+.frame {
+    display: block;
+    margin: 4px 4px;
+
+}
+</style>
+</head>
+<body>
+<div style="display:relative">
+    <div style="display:inline-block; max-width:500px; vertical-align:top;">
+        <input id="videoFile" type="file"/>
+        <video id="v" style="width:100%; height:auto;"></video>
+        <input id = "startTime" type = "text"/>
+        <input id = "duration" type = "text"/>
+        <input id="back" type="button" value="<<"/>
+        <input id="forward" type="button" value=">>"/>
+
+        <input id = "start" type = "button" value="rec"/>
+        <div id = "seek" style="width:100%; height:14px; background-color:red;">
+            <div id="seekbar" style="width:14px; height:14px; background-color:gray;"></div> 
+        </div>
+
+    </div>
+    <div id = "frames" style="width:240px;
+        height:600px; 
+        overflow-y:scroll;
+        background-color:ghostwhite; 
+        display:inline-block;"></div>
+</div>
+
+
+<script>
+var httpClient = function httpClient(){
+"use strict";
+
+  var request = function(method, uri, body){
+
+    body=body||"";
+
+    return new Promise(function(resolve,reject){
+      var client = new XMLHttpRequest();
+
+      client.onload=function(e){
+        if (this.status==200){
+          resolve(this.response);
+        }else{
+          reject(this.statusText);
+        }
+      };
+
+      client.open(method,uri);
+      client.send(body);
+    });
+  };
+  return {request:request};
+};
+
+var http = httpClient();
+
+var states = {
+    PAUSED:'PAUSED',
+    PLAYING:'PLAYING'
+};
+
+var videoFile = document.getElementById("videoFile");
+var v = document.getElementById("v");
+var state = states.PAUSED;
+var frames = document.getElementById("frames");
+var duration = document.getElementById("duration");
+var start = document.getElementById("start");
+var startTime = document.getElementById("startTime");
+var forward = document.getElementById("forward");
+var back = document.getElementById("back");
+var seek = document.getElementById("seek");
+var seekbar = document.getElementById("seekbar");
+var buffers = [];
+
+document.getElementById("seek").addEventListener("mousedown", function(e){
+
+    var rect = seek.getBoundingClientRect();
+    var x = e.clientX - rect.left;
+    var y = e.clientY - rect.top;
+    console.log(e, x, y);
+    e.preventDefault();
+    e.stopPropagation();
+
+    var cur = x / rect.width;
+    seekbar.style.marginLeft = `${x}px`;
+    var t = v.duration * cur;
+    startTime.value = "" + t;
+    setTime();
+
+}, true);
+
+startTime.onkeydown = setTime;
+startTime.onchange = setTime;
+
+start.addEventListener("click", grab);
+
+function setTime ()
+{
+    console.log("set time?");
+    var time = startTime.value | 0;
+    v.currentTime = time; 
+}
+
+function fastForward ()
+{
+    var time = startTime.value | 0;
+    startTime.value = time + 10;
+    setTime();
+}
+
+function rewind ()
+{
+    var time = startTime.value | 0;
+    startTime.value = time - 10;
+    setTime();
+}
+
+forward.onclick = fastForward;
+back.onclick = rewind;
+
+videoFile.onchange = function(e) {
+    var files = e.target.files;
+    console.log(e, files);
+
+    if (files.length !== 1) return;
+
+    var uri = window.URL.createObjectURL (files[0]);
+    v.src = uri;
+};
+
+v.addEventListener("playing", function(){
+    state = states.PLAYING;
+});
+
+v.addEventListener("pause", function(e){
+    state = states.PAUSED;
+});
+
+
+
+function grab ()
+{
+    frames.innerHTML = "";
+    var dt = 1/10;
+    var length = duration.value | 0;
+    v.pause();
+    var i = v.currentTime;
+    var end = i + length;
+
+    console.log (i, end, dt);
+
+    var take = function () {
+        if (i < end) {
+            takeFrame();
+            i += dt;
+            v.currentTime = i;
+        } else {
+            v.removeEventListener("seeked", take);
+            
+            var b = [].concat(...buffers);
+            var buf = Uint8Array.from(b);
+            console.log(buf);
+            var blob = new Blob([buf], {type:'image/png'});
+            http.request("POST", "/api", blob);
+        }
+    };
+
+    v.addEventListener("seeked", take);
+    buffers = [];
+    take();
+}
+
+
+function takeFrame ()
+{
+    var ratio = v.videoHeight / v.videoWidth;
+    var width = 200;
+    var height = width * ratio|0;
+    console.log(width, height);
+
+    var canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    canvas.className = "frame";
+    var ctx = canvas.getContext("2d");
+    ctx.drawImage(v, 0, 0, width, height);
+    //frames.appendChild(canvas);
+
+	var d = canvas.toDataURL().split(',')[1];
+	var b = [].slice.call(atob(d)).map(x => x.charCodeAt(0));
+
+    var len = b.length;
+    var blen = [];
+    blen.push(len & 255);
+    blen.push((len >> 8) & 255);
+    blen.push((len >> 16) & 255);
+    blen.push((len >> 24) & 255);
+
+    buffers.push(blen);
+    buffers.push(b);
+
+/* 
+	var buf = Uint8Array.from(b);
+	console.log(buf);
+	var blob = new Blob([buf], {type:'image/png'});
+
+	http.request("POST", "/api", blob);
+   
+*/
+
+    if (frames.children.length > 0){
+        var first = frames.children[0];
+        frames.insertBefore (canvas, first); 
+    } else {
+        frames.appendChild(canvas);
+    }
+}
+/*
+setInterval(function(){
+    if (state === states.PLAYING){
+        takeFrame();
+    }
+}, 1000);
+*/
+</script>
+</body>
+</html>
+
