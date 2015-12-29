@@ -190,7 +190,7 @@ function grab ()
             console.log(buf);
             var blob = new Blob([buf], {type:'image/png'});
             http.request("POST", "/api", blob).then(function(res){
-                var link = `${location.host}/gif/${res}`;
+                var link = `${location.origin}/gif/${res}`;
                 giflink.href = link;
                 giflink.innerHTML = link;
             });
