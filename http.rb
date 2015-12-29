@@ -15,6 +15,15 @@ def serve_content (sock, file, content_type)
     sock.print response
 end
 
+def serve_response (sock, response, content_type)
+    sock.print "HTTP/1.1 200 OK\r\n" +
+               "Content-Type: #{content_type}\r\n" +
+               "Content-Length: #{response.bytesize}\r\n" +
+               "Connection: close\r\n" +
+               "\r\n"
+    sock.print response
+end
+
 def handle_static (sock, headers)
     puts "handle_static"
     File.open('./static/index.html') do |file|
@@ -66,8 +75,9 @@ def handle_api (sock, headers)
     end
 
 #    `cd tmp/#{id} && tar -cf #{id}.tar * && rm *.png`
-    `./gif.sh ./tmp/#{id}`
+    `./gif.sh ./tmp/#{id} && rm ./tmp/#{id}/*.png`
 
+    serve_response(sock, "#{id}", "text/json")
      
 =begin
     if len > 0
@@ -76,7 +86,6 @@ def handle_api (sock, headers)
     end
 =end
 
-    sock.print "HTTP/1.1 200 OK\r\n"
 end
 
 def handle_request (sock, i)
